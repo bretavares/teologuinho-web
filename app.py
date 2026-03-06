@@ -1,0 +1,56 @@
+import streamlit as st
+from google import genai
+
+# Configurações Visuais
+st.set_page_config(page_title="Teologuinho - Chat Pastoral", page_icon="📖")
+
+# Estilo para esconder o menu do Streamlit e deixar mais limpo
+st.markdown("""
+    <style>
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
+    header {visibility: hidden;}
+    </style>
+    """, unsafe_allow_html=True)
+
+st.title("📖 Teologuinho")
+st.info("Assistente Virtual de Teologia Reformada para edificação dos irmãos.")
+
+# 1. Busca a chave de forma segura nos segredos do Streamlit
+try:
+    CHAVE_GEMINI = st.secrets["GEMINI_API_KEY"]
+    cliente_gemini = genai.Client(api_key=CHAVE_GEMINI)
+except:
+    st.error("Erro: Chave de API não configurada.")
+    st.stop()
+
+# 2. Inicializa o histórico de conversas
+if "messages" not in st.session_state:
+    st.session_state.messages = []
+
+# Exibe as mensagens do histórico
+for message in st.session_state.messages:
+    with st.chat_message(message["role"]):
+        st.markdown(message["content"])
+
+# 3. Campo de entrada
+if prompt := st.chat_input("Em que posso ajudar, querido irmão?"):
+    st.session_state.messages.append({"role": "user", "content": prompt})
+    with st.chat_message("user"):
+        st.markdown(prompt)
+
+    with st.chat_message("assistant"):
+        try:
+            INSTRUCOES = "Você é o Teologuinho, um assistente pastoral reformado. Responda de forma curta, bíblica e acolhedora."
+            
+            resposta = cliente_gemini.models.generate_content(
+                model='gemini-1.5-flash',
+                contents=prompt,
+                config={'system_instruction': INSTRUCOES}
+            )
+            
+            st.markdown(resposta.text)
+            st.session_state.messages.append({"role": "assistant", "content": resposta.text})
+            
+        except Exception as e:
+            st.error("Desculpe, irmão, tive um problema técnico. Tente novamente.")
