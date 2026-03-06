@@ -22,20 +22,17 @@ header {visibility: hidden;}
 """, unsafe_allow_html=True)
 
 # ---------------------------------------------------
-# CONEXÃO COM A API GEMINI
+# CONEXÃO COM A API
 # ---------------------------------------------------
 
 @st.cache_resource
 def iniciar_cliente():
-
     try:
         chave = st.secrets["GEMINI_API_KEY"]
         return genai.Client(api_key=chave)
-
     except Exception:
         st.error("Erro: configure corretamente a GEMINI_API_KEY nos Secrets.")
         st.stop()
-
 
 cliente = iniciar_cliente()
 
@@ -55,10 +52,10 @@ Soberania de Deus
 Doutrinas da Graça (TULIP)
 Teologia da Aliança
 
-Referências teológicas:
-Calvino
-Lutero
-Knox
+Referências:
+João Calvino
+Martinho Lutero
+John Knox
 Jonathan Edwards
 Charles Hodge
 Herman Bavinck
@@ -87,7 +84,7 @@ st.title("📖 Teologuinho")
 st.caption("Fidelidade Bíblica — IEC Kairós")
 
 # ---------------------------------------------------
-# MEMÓRIA DA CONVERSA
+# MEMÓRIA DO CHAT
 # ---------------------------------------------------
 
 if "messages" not in st.session_state:
@@ -96,13 +93,11 @@ if "messages" not in st.session_state:
 # Mostrar histórico
 
 for message in st.session_state.messages:
-
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
 
-
 # ---------------------------------------------------
-# FUNÇÃO DE RESPOSTA (COM RETRY E PARSING CORRETO)
+# FUNÇÃO DE RESPOSTA
 # ---------------------------------------------------
 
 def gerar_resposta(prompt):
@@ -117,14 +112,14 @@ def gerar_resposta(prompt):
 
             response = cliente.models.generate_content(
 
-                model="gemini-1.5-flash-002",
+                model="gemini-2.0-flash",
 
-                contents=prompt,
+                contents=[prompt],
 
                 config=types.GenerateContentConfig(
                     system_instruction=INSTRUCOES_SISTEMA,
                     temperature=0.3,
-                    max_output_tokens=800
+                    max_output_tokens=700
                 )
             )
 
@@ -132,13 +127,12 @@ def gerar_resposta(prompt):
 
             if response and response.candidates:
 
-                partes = response.candidates[0].content.parts
-
                 texto = ""
 
-                for p in partes:
-                    if hasattr(p, "text"):
-                        texto += p.text
+                for parte in response.candidates[0].content.parts:
+
+                    if hasattr(parte, "text"):
+                        texto += parte.text
 
                 if texto.strip():
                     return texto
@@ -148,10 +142,10 @@ def gerar_resposta(prompt):
         except Exception as erro:
 
             ultimo_erro = erro
-            time.sleep(8)
+
+            time.sleep(6)
 
     return f"Ocorreu um erro ao consultar o servidor: {ultimo_erro}"
-
 
 # ---------------------------------------------------
 # CHAT
@@ -173,7 +167,7 @@ if prompt := st.chat_input("Em que posso ajudar, meu irmão?"):
         if resposta:
             st.markdown(resposta)
         else:
-            st.warning("Não consegui gerar resposta. Tente novamente.")
+            st.warning("Não consegui gerar resposta.")
 
         st.session_state.messages.append(
             {"role": "assistant", "content": resposta}
